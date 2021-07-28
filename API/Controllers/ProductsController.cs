@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Core.Interfaces;
 using Core.Specifications;
+using API.Dtos;
+using AutoMapper;
 
 namespace API.Controllers
 {
@@ -15,25 +17,34 @@ namespace API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IGenericRepository<Product> _repository;
-        public ProductsController(IGenericRepository<Product> repository)
+        private readonly IMapper _mapper;
+        public ProductsController(IGenericRepository<Product> repository, IMapper mapper)
         {
+            _mapper = mapper;
             _repository = repository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             var spec = new ProductsWithTypesAndBrandsSpecification();
 
-            return Ok(await _repository.ListAsync(spec));
+            var products = await _repository.ListAsync(spec);
+
+            return Ok(_mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductDto>>(products));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<ProductDto>> GetProduct(int id)
         {
-            var product = await _repository.GetByIdAsync(id);
-            if(product!=null)
-            return Ok(product);
+            var spec = new ProductsWithTypesAndBrandsSpecification(id);
+            var product = await _repository.GetBySpecification(spec);
+            if (product != null)
+            {
+
+                return Ok(_mapper.Map<Product, ProductDto>(product));
+            }
+
             return NotFound();
         }
     }
